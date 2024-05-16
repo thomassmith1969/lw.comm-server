@@ -987,7 +987,14 @@ io.sockets.on('connection', function (appSocket) {
 
             case 'telnet':  // Only supported by smoothieware!
                 connectedIp = data[1];
-                telnetSocket = net.connect(23, connectedIp);
+                var port=23;
+                if(connectedIp.contains(':'))
+                    {
+                        const parts=data[1].split(':');
+                        port=eval(parts[1]);
+                        connectedIp=parts[0]
+                    }
+                telnetSocket = net.connect(port, connectedIp);
                 io.sockets.emit('connectStatus', 'opening:' + connectedIp);
 
                 // Telnet connection events -----------------------------------------------
