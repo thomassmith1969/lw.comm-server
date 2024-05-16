@@ -382,19 +382,19 @@ io.sockets.on('connection', function (appSocket) {
             firmware = false;
             switch (connectionType) {
             case 'usb':
-                port = new SerialPort(data[1], {
+                telnetPort = new SerialPort(data[1], {
                     baudRate: parseInt(data[2].replace('baud',''))
                 });
-                const parser = port.pipe(new Readline({ delimiter: '\n' }))
+                const parser = telnetPort.pipe(new Readline({ delimiter: '\n' }))
                 // parser.on('data', console.log)  // uncomment to dump raw data from the connected port
-                io.sockets.emit('connectStatus', 'opening:' + port.path);
+                io.sockets.emit('connectStatus', 'opening:' + telnetPort.path);
 
                 // Serial port events -----------------------------------------------
-                port.on('open', function () {
-                    io.sockets.emit('activePort', {port: port.path, baudrate: port.settings.baudRate});
-                    io.sockets.emit('connectStatus', 'opened:' + port.path);
+                telnetPort.on('open', function () {
+                    io.sockets.emit('activePort', {port: telnetPort.path, baudrate: telnetPort.settings.baudRate});
+                    io.sockets.emit('connectStatus', 'opened:' + telnetPort.path);
                     if (reset) {
-                        port.write(String.fromCharCode(0x18)); // ctrl-x (reset firmware)
+                        telnetPort.write(String.fromCharCode(0x18)); // ctrl-x (reset firmware)
                         writeLog('Sent: ctrl-x', 1);
                     } else {
                         machineSend('\n'); // this causes smoothie to send the welcome string
@@ -423,9 +423,9 @@ io.sockets.on('connection', function (appSocket) {
                         setTimeout(function () {
                             // Close port if we don't detect supported firmware after 2s.
                             if (!firmware) {
-                                writeLog('No supported firmware detected. Closing port ' + port.path, 1);
-                                io.sockets.emit('data', 'No supported firmware detected. Closing port ' + port.path);
-                                io.sockets.emit('connectStatus', 'closing:' + port.path);
+                                writeLog('No supported firmware detected. Closing port ' + telnetPort.path, 1);
+                                io.sockets.emit('data', 'No supported firmware detected. Closing port ' + telnetPort.path);
+                                io.sockets.emit('connectStatus', 'closing:' + telnetPort.path);
                                 clearInterval(queueCounter);
                                 clearInterval(statusLoop);
                                 gcodeQueue.length = 0; // dump the queye
@@ -433,15 +433,15 @@ io.sockets.on('connection', function (appSocket) {
                                 tinygBufferSize = TINYG_RX_BUFFER_SIZE; // reset tinygBufferSize
                                 reprapBufferSize = REPRAP_RX_BUFFER_SIZE; // reset reprapBufferSize
                                 reprapWaitForPos = false;
-                                port.close();
+                                telnetPort.close();
                             }
                         }, config.firmwareWaitTime * 1000);
                     }
                     //machineSend("M115\n");    // Lets check if its Marlin?
 
-                    writeLog(chalk.yellow('INFO: ') + 'Connected to ' + port.path + ' at ' + port.settings.baudRate, 1);
+                    writeLog(chalk.yellow('INFO: ') + 'Connected to ' + telnetPort.path + ' at ' + telnetPort.settings.baudRate, 1);
                     isConnected = true;
-                    connectedTo = port.path;
+                    connectedTo = telnetPort.path;
 
                     // Start interval for qCount messages to socket clients
 //                        queueCounter = setInterval(function () {
@@ -449,7 +449,7 @@ io.sockets.on('connection', function (appSocket) {
 //                        }, 500);
                 });
 
-                port.on('close', function () { // open errors will be emitted as an error event
+                telnetPort.on('close', function () { // open errors will be emitted as an error event
                     clearInterval(queueCounter);
                     clearInterval(statusLoop);
                     io.sockets.emit("connectStatus", 'closed:');
@@ -462,7 +462,7 @@ io.sockets.on('connection', function (appSocket) {
                     writeLog(chalk.yellow('INFO: ') + chalk.blue('Port closed'), 1);
                 });
 
-                port.on('error', function (err) { // open errors will be emitted as an error event
+                telnetPort.on('error', function (err) { // open errors will be emitted as an error event
                     writeLog(chalk.red('PORT ERROR: ') + chalk.blue(err.message), 1);
                     io.sockets.emit('error', err.message);
                     io.sockets.emit('connectStatus', 'closed:');
@@ -987,14 +987,14 @@ io.sockets.on('connection', function (appSocket) {
 
             case 'telnet':  // Only supported by smoothieware!
                 connectedIp = data[1];
-                var port=23;
+                var telnetPort=23;
                 if(connectedIp.split(' ').length==2)
                     {
                         const parts=connectedIp.split(' ');
-                        port=parseInt(parts[1]);
+                        telnetPort=parseInt(parts[1]);
                         connectedIp=parts[0]
                     }
-                telnetSocket = net.connect(port, connectedIp);
+                telnetSocket = net.connect(telnetPort, connectedIp);
                 io.sockets.emit('connectStatus', 'opening:' + connectedIp);
 
                 // Telnet connection events -----------------------------------------------
@@ -1939,7 +1939,7 @@ io.sockets.on('connection', function (appSocket) {
         } else {
             switch (connectionType) {
             case 'usb':
-                io.sockets.emit("connectStatus", 'opened:' + port.path);
+                io.sockets.emit("connectStatus", 'opened:' + telnetPort.path);
                 break;
             case 'telnet':
                 io.sockets.emit("connectStatus", 'opened:' + connectedIp);
